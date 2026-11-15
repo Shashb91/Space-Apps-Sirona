@@ -1,0 +1,8 @@
+# The Python server's packages. launcher.py ("Start" in the project folder) installs them in .venv;
+# by hand: pip install -r requirements.txt
+fastapi>=0.110
+uvicorn>=0.29
+numpy>=1.26
+spiceypy>=6.0
+tifffile>=2023.7.10
+imagecodecs>=2024.1.1  # tifffile needs it for ldem_64_slope.tif (floating-point predictor)
