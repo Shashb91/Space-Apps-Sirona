@@ -1,0 +1,4 @@
+# The Start files keep their line endings on every computer (a Mac can't run a script with CRLF)
+*.bat     text eol=crlf
+*.command text eol=lf
+*.sh      text eol=lf

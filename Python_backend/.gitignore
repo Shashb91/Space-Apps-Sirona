@@ -1,0 +1,8 @@
+# Big data files, downloaded separately (download_files.py and the LOLA relief map)
+*.bsp
+*.bpc
+*.tpc
+*.tls
+*.tf
+*.tif
+__pycache__/

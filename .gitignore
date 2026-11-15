@@ -1,0 +1,21 @@
+# Made by launcher.py
+.venv/
+.launcher.lock
+*.part
+__pycache__/
+
+# Too big for GitHub (over 25 MB): launcher.py downloads them from NASA, see README.md.
+# Python_backend/.gitignore keeps out ldem_64.tif, ldem_64_slope.tif and the SPICE kernels.
+UI/tif/lroc_color_16bit_srgb_4k.tif
+UI/tif/ldem_16_uint.tif
+# Maps dropped next to the Start file, before launcher.py moves them
+/*.tif
+/*.zip
+
+# Not needed to run the app
+UI/tif/lroc_color_16bit_srgb_16k.tif
+# (the source of UI/tif/lroc_16k_tiles, made by tools/make_highres_tiles.py)
+Unified_Geologic_Map_of_the_Moon_GIS_v2/
+# (USGS data, the source of UI/data/geology, made by tools/geology_to_web.py)
+dist/
+# (what build_zip.py makes)
