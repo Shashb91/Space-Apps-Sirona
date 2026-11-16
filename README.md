@@ -1,6 +1,6 @@
 # Lunar Landing Site Navigator
 
-NASA Space Apps Challenge 2026, Milano. A 3D Moon to find and compare landing sites: sunlight, the Earth in the sky, temperatures, slopes, water, geology, and rover routes.
+NASA Space Apps Challenge 2026, Milano. A 3D Moon to find and compare landing sites: sunlight, the Earth in the sky, temperatures, slopes, water, geology, and rover routes. It aims teens, teachers, students, but also PhD students and even engineers.
 
 ## Start it
 
