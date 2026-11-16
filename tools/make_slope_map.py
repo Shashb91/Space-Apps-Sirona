@@ -4,9 +4,11 @@ NASA relief map Python_backend/ldem_64.tif. Run it once (launcher.py does it whe
 
     python tools/make_slope_map.py            or: python tools/make_slope_map.py <dem.tif> <slope.tif>
 
+Any whole-Moon relief map from 180 W works (launcher.py also uses it on the 16 pixels per degree one).
+
 Each pixel's slope in degrees, from its neighbours (central differences):
-    dz/dx = (z east - z west) / (2 dx)       dx = R x 1/64 deg x cos(latitude)   (wraps round at 180 deg)
-    dz/dy = (z north - z south) / (2 dy)     dy = R x 1/64 deg
+    dz/dx = (z east - z west) / (2 dx)       dx = R x 1/ppd deg x cos(latitude)   (wraps round at 180 deg)
+    dz/dy = (z north - z south) / (2 dy)     dy = R x 1/ppd deg   (ppd: pixels per degree)
     slope = arctan(sqrt(dz/dx^2 + dz/dy^2))
 The two pole rows use the row next to them only. z is in km, as in ldem_64.tif.
 Needs numpy, tifffile and imagecodecs (Python_backend/requirements.txt).
@@ -19,19 +21,18 @@ import tifffile
 
 BACKEND = Path(__file__).resolve().parents[1] / "Python_backend"
 R_MOON = 1737.4  # km, as constants.py
-PPD = 64  # pixels per degree, as DEM_PPD in constants.py
 TILE = 256  # rows (and columns) per tile: 11520 x 23040 is 45 x 90 tiles
 
 
-def slope_rows(z, r0, r1):
+def slope_rows(z, r0, r1, ppd):
     """Slopes (degrees) of rows r0 to r1 - 1 of the relief z (km, 90 N at the top)."""
     h = z.shape[0]
     top, bottom = max(r0 - 1, 0), min(r1 + 1, h)
     block = np.asarray(z[top:bottom], dtype=np.float32)
     rows = np.arange(r0, r1)
     north, south = np.maximum(rows - 1, 0), np.minimum(rows + 1, h - 1)
-    dy = np.float32(R_MOON * np.pi / 180 / PPD)
-    dx = (dy * np.cos(np.radians(90 - (rows + 0.5) / PPD))).astype(np.float32)[:, None]  # pixel centres
+    dy = np.float32(R_MOON * np.pi / 180 / ppd)
+    dx = (dy * np.cos(np.radians(90 - (rows + 0.5) / ppd))).astype(np.float32)[:, None]  # pixel centres
     mid = block[r0 - top:r1 - top]
     dzdx = (np.roll(mid, -1, axis=1) - np.roll(mid, 1, axis=1)) / (2 * dx)
     dzdy = (block[north - top] - block[south - top]) / ((south - north).astype(np.float32)[:, None] * dy)
@@ -45,11 +46,12 @@ def make(dem_path, out_path, show=print):
         z = tifffile.imread(dem_path)
     z = np.squeeze(z)
     h, w = z.shape
+    ppd = w / 360
     shown = set()
 
     def tiles():
         for r0 in range(0, h, TILE):
-            block = slope_rows(z, r0, min(r0 + TILE, h)).astype(np.float32)
+            block = slope_rows(z, r0, min(r0 + TILE, h), ppd).astype(np.float32)
             for c0 in range(0, w, TILE):
                 yield block[:, c0:c0 + TILE]
             quarter = 4 * min(r0 + TILE, h) // h
