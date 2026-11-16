@@ -84,5 +84,5 @@ Set a start A and a destination B (type them or click the Moon), and the steepes
 ## The team
 
 - [@maximechaudronperso-ui](https://github.com/maximechaudronperso-ui) drew the UI: the mode buttons, panel frames, tick boxes, knob, area markers and music button.
-- Shashankan made the front end: the website, the 3D Moon in Three.js and the four modes.
+- [I](https://github.com/Shashb91) made the front end: the website, the 3D Moon in Three.js and the four modes.
 - [@OlivierAntonio](https://github.com/OlivierAntonio) and [@Thomas-Gaume](https://github.com/Thomas-Gaume) made the Python back end and its algorithms: the Sun, the Earth and the temperatures from NASA's SPICE ephemerides, A\* for Sirona Maps, and the referenced search with graphs for Parametric Search.
