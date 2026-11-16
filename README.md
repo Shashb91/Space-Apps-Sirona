@@ -1,4 +1,4 @@
-# Lunar Landing Site Navigator
+# Sirona - Lunar Landing Site Navigator
 
 ### Where on the Moon would you land? Ask the Moon.
 
