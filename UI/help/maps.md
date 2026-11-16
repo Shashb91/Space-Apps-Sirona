@@ -21,3 +21,8 @@ Then click **Find route**.
 ## Good to know
 
 Routes are found by the team's Python server, on a slope map of the whole Moon (LOLA). Without the server, this mode says so.
+
+## The panels
+
+- Drag a panel's title to move it to the left, the right or the bottom; a gold block shows where it will go (Escape cancels). At the bottom it becomes a wide strip, and the Moon steps back to fit above it.
+- Drag its free edges to resize it, and click **–** to shrink it to a small bar; **Reopen** brings it back.

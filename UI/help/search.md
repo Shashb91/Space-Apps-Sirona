@@ -46,3 +46,8 @@ Its columns:
 
 - The Sun and Earth criteria need the team's Python server. The ground criteria are read on the site's own maps and work without it.
 - Hills and crater walls are taken into account when the server has the relief map. The results say whether they were.
+
+## The panels
+
+- Drag a panel's title to move it to the left, the right or the bottom; a gold block shows where it will go (Escape cancels). At the bottom it becomes a wide strip, and the Moon steps back to fit above it.
+- Drag its free edges to resize it, and click **–** to shrink it to a small bar; **Reopen** brings it back.

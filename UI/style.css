@@ -61,7 +61,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
 .mode-soon { margin: 0; color: var(--muted); }
 
 /* --- Mode buttons (top left) ------------------------------------------------------ */
-.modes { display: flex; gap: 6px; width: max-content; margin-bottom: 6px; text-shadow: none; }
+/* The mode buttons, then Help */
+.mode-row { display: flex; gap: 6px; width: max-content; margin-bottom: 6px; }
+.modes { display: flex; gap: 6px; text-shadow: none; }
 /* Drawn buttons (240 × 62 images shown at half size): 8 px corners kept, the middle stretched */
 .mode {
   all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
@@ -147,9 +149,10 @@ body:not([data-mode="custom"]) .month-panel { display: none; }
    _hover, and _active once clicked. search.js shrinks the block (zoom) on short windows. */
 .search-areas {
   --accent: var(--gold); --muted: #A4A4C0;
-  position: fixed; top: 16px; right: 16px;
-  display: grid; grid-template-columns: 250px 250px; gap: 16px; /* scaled by search.js (fitPanels) */
+  position: fixed; top: 16px; right: 16px; /* scaled (zoom) and placed by search.js and windows.js */
 }
+.areas-grid { display: grid; grid-template-columns: 250px 250px; gap: 16px; }
+.areas-title { height: 34px; box-sizing: border-box; margin: 0; padding: 2px 34px 0 2px; text-shadow: 0 1px 3px #000; }
 .search-areas[hidden], body:not([data-mode="search"]) .search-areas { display: none; }
 .area-panel {
   position: relative; width: 250px; height: 404px; cursor: pointer; outline: none;
@@ -546,10 +549,12 @@ body:not([data-mode="custom"]) .point-floats { display: none; }
   html { height: auto; overflow-y: auto; }
   body { height: auto; overflow: visible; display: flex; flex-direction: column; gap: 14px; padding: 16px 0 20px; }
   .layers { position: static; order: 1; gap: 14px; padding: 0 16px; }
-  .modes { width: auto; margin-bottom: 0; }
+  .mode-row { width: auto; margin-bottom: 0; }
+  .modes { flex: 1; }
   .mode { flex: 1; padding: 0 2px; text-align: center; white-space: normal; }
   .point-card { width: auto; max-height: none; margin: 0 -6px; }
-  .search-areas { position: relative; inset: auto; order: 4; justify-content: center; margin: 0 10px; }
+  .search-areas { position: relative; inset: auto; order: 4; margin: 0 10px; }
+  .areas-grid { justify-content: center; }
   .tick { min-height: 28px; }
   #panel { position: static; order: 2; margin: 0 10px; }
   /* Shorter than the screen so a swipe above or below the Moon still scrolls the page */
@@ -621,9 +626,9 @@ body:not([data-mode="custom"]) .point-floats { display: none; }
 .export-choice[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: rgba(198, 188, 0, 0.14); }
 .export-choice:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
-/* --- Help (help.js): the button right of the bottom-left panel (--panel-w: its width, from main.js),
-   drawn like the mode buttons, and its panel, in the small frame like "Add a category" ---------- */
-.help-button { position: fixed; left: calc(16px + var(--panel-w, 360px) + 10px); bottom: 16px; padding: 0 14px; }
+/* --- Help (help.js): the button after the mode buttons, drawn like them, and its panel,
+   in the small frame like "Add a category" ---------- */
+.help-button { flex: none; padding: 0 14px; text-shadow: none; }
 .help-button[aria-expanded="true"] { color: #fff; border-image-source: url("textures/mode_active.png"); }
 .help-dialog { width: 560px; max-height: min(780px, calc(100vh - 32px)); padding: 20px 14px 22px 26px; font-size: 14px; line-height: 1.55; overflow: hidden; }
 .help-dialog[open] { display: flex; flex-direction: column; }
@@ -649,9 +654,6 @@ body:not([data-mode="custom"]) .point-floats { display: none; }
 .help-body hr { margin: 14px 0; border: 0; border-top: 1px solid var(--line); }
 .help-body blockquote { margin: 0 0 8px; padding-left: 12px; border-left: 2px solid var(--line); color: var(--muted); }
 .help-body .help-note { color: var(--muted); }
-@media (max-width: 760px), (max-height: 500px) {
-  .help-button { position: static; order: 2; flex: none; align-self: flex-start; margin: 0 10px; padding: 0 14px; }
-}
 .category-dialog input[type="file"] { padding: 5px 8px; font-size: 12.5px; cursor: pointer; }
 .category-dialog input[type="file"]::file-selector-button {
   margin-right: 8px; padding: 3px 10px; border: 0; border-radius: 4px;
@@ -674,3 +676,97 @@ body:not([data-mode="custom"]) .point-floats { display: none; }
 .dialog-actions .link-button { align-self: center; }
 .dialog-actions .point-go { width: auto; margin-top: 0; padding: 7px 22px; }
 .dialog-actions .point-go:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+/* --- Windows (windows.js): the mode panels resized, moved and minimised; computers only ------------- */
+.win-grip, .win-min-btn { display: none; }
+.windows .win .window-title { padding-right: 34px; cursor: grab; }
+.windows .win .window-title :is(button, input) { cursor: pointer; }
+.windows .win .window-title input { cursor: text; }
+.windows .win-min { display: none !important; }
+.windows .side-panel .legend-reset { right: 58px; }
+/* The free edges: side (the width), end (the height), corner (both); which ones depends on the dock */
+.windows .win-grip { display: block; position: absolute; z-index: 2; }
+.windows .win-grip:hover { background: rgba(198, 188, 0, 0.3); }
+.win[data-dock="left"] .win-side, .win[data-dock="bottom"] .win-side { top: 0; bottom: 0; right: -4px; width: 8px; cursor: ew-resize; }
+.win[data-dock="right"] .win-side { top: 0; bottom: 0; left: -4px; width: 8px; cursor: ew-resize; }
+.win[data-dock="left"] .win-end, .win[data-dock="right"] .win-end { left: 0; right: 0; bottom: -4px; height: 8px; cursor: ns-resize; }
+.win[data-dock="bottom"] .win-end { left: 0; right: 0; top: -4px; height: 8px; cursor: ns-resize; }
+.win[data-dock="left"] .win-corner { right: -6px; bottom: -6px; width: 14px; height: 14px; cursor: nwse-resize; }
+.win[data-dock="right"] .win-corner { left: -6px; bottom: -6px; width: 14px; height: 14px; cursor: nesw-resize; }
+.win[data-dock="bottom"] .win-corner { right: -6px; top: -6px; width: 14px; height: 14px; cursor: nesw-resize; }
+.windows .win-min-btn {
+  all: unset; position: absolute; top: 18px; right: 18px; z-index: 3; width: 26px; height: 26px;
+  display: grid; place-items: center; border-radius: 5px; cursor: pointer;
+  font-size: 18px; line-height: 1; color: var(--muted); text-shadow: none;
+}
+.windows .point-card > .win-min-btn { top: 28px; right: 20px; }
+.windows .search-areas > .win-min-btn { top: 2px; right: 0; background: rgba(0, 0, 38, 0.7); }
+.windows .win-min-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+.windows .win-min-btn:focus-visible { outline: 2px solid var(--focus); }
+/* Moving: the panel darkens, and a block (square corners) shows where it will go */
+.win-moving { filter: brightness(0.4) saturate(0.6); }
+body.win-dragging, body.win-dragging * { cursor: grabbing !important; user-select: none; }
+body.win-resizing { user-select: none; }
+.dock-preview {
+  position: fixed; z-index: 40; box-sizing: border-box; pointer-events: none;
+  border: 2px solid var(--gold); border-radius: 0; background: rgba(198, 188, 0, 0.12);
+}
+/* Minimised: the title and Reopen, in the floating panels' frame, where the window was */
+.window-bar {
+  --muted: #A4A4C0;
+  position: fixed; z-index: 30; display: flex; align-items: center; gap: 14px;
+  padding: 7px 8px 7px 14px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid transparent; border-image: url("textures/float.png") 24 fill / 12px stretch;
+  font-size: 13px; color: var(--text);
+}
+.window-bar-title { font-weight: 600; white-space: nowrap; }
+.window-bar-open {
+  all: unset; cursor: pointer; padding: 3px 10px; border: 1px solid #5C5720; border-radius: 4px;
+  font-size: 12px; font-weight: 500; color: var(--gold);
+}
+.window-bar-open:hover { color: #fff; background: rgba(198, 188, 0, 0.14); }
+.window-bar-open:focus-visible { outline: 2px solid #E8DE50; outline-offset: 2px; }
+/* At the bottom: a wide strip, laid out across */
+/* Missions, locations, geology: the legend on the left, the list in columns */
+[data-mode="visualisation"].windows .side-panel[data-dock="bottom"]:not([hidden]) {
+  display: grid; grid-template-columns: 300px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
+  column-gap: 20px; padding-bottom: 18px;
+}
+.windows .side-panel[data-dock="bottom"] > .window-title { grid-column: 1 / -1; }
+.windows .side-panel[data-dock="bottom"] > .legend {
+  grid-column: 1; grid-row: 2 / -1; align-content: start; grid-template-columns: 1fr 1fr;
+  margin: 0; padding: 0 12px 0 0; overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--line);
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.windows .side-panel[data-dock="bottom"] > .item-list {
+  grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  align-content: start; column-gap: 8px;
+}
+.windows .side-panel[data-dock="bottom"] > .source { grid-column: 2; grid-row: 3; margin-top: 6px; }
+/* The forms: the fields on the left, the results on the right */
+.windows .point-card[data-dock="bottom"] { padding: 26px 0; }
+.windows .point-card[data-dock="bottom"] .card-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  grid-template-rows: repeat(4, auto) 1fr; column-gap: 28px; align-items: start;
+}
+.windows .point-card[data-dock="bottom"] .card-body:has(> .point-result:empty) { grid-template-columns: minmax(0, 1fr); }
+/* The fields across, as many as fit: a label (A, B) beside its two fields */
+.windows .point-card[data-dock="bottom"] .point-fields { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.windows .point-card[data-dock="bottom"] .point-fields .wide { grid-column: span 2; }
+.windows .point-card[data-dock="bottom"] .point-fields .criteria { grid-column: 1 / -1; }
+.windows .point-card[data-dock="bottom"] .point-fields .route-end { align-self: center; }
+.windows .point-card[data-dock="bottom"] .card-body > .point-go { justify-self: start; width: 260px; }
+.windows .point-card[data-dock="bottom"] .card-body > * { grid-column: 1; }
+.windows .point-card[data-dock="bottom"] .card-body > .point-result { grid-column: 2; grid-row: 1 / -1; margin-top: 0; }
+.windows .point-card[data-dock="bottom"] .card-body > .point-result:not(:empty) { padding: 0 0 0 20px; border-top: 0; border-left: 1px solid var(--line); }
+/* The month: the graphs on the left, the rest on the right */
+.windows .month-panel[data-dock="bottom"] { padding-bottom: 22px; }
+.windows .month-panel[data-dock="bottom"] .month-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: repeat(5, auto) 1fr;
+  column-gap: 24px; align-content: start;
+}
+.windows .month-panel[data-dock="bottom"] .month-body > * { grid-column: 2; }
+.windows .month-panel[data-dock="bottom"] .month-body > .month-time { grid-column: 1; grid-row: 1; margin-top: 0; }
+.windows .month-panel[data-dock="bottom"] .month-body > .month-charts { grid-column: 1; grid-row: 2 / -1; min-height: 160px; height: 100%; }
+/* Best areas: the four in a row */
+.windows .search-areas[data-dock="bottom"] .areas-grid { grid-template-columns: repeat(4, 250px); }

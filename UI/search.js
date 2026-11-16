@@ -26,6 +26,7 @@ const PANEL_ROWS = [
   { y: 384, types: ["terrain", "geology"], more: "Smoother than", less: "Rougher than" },
 ];
 const PANEL_W = 250, PANEL_H = 404, PANEL_GAP = 16; // the images' size; the gap as in style.css
+const AREAS_HEAD = 34; // the "Best areas" title above them (style.css .areas-title)
 const LEFT_COLUMN = 400; // the search card and its margins: the panels never reach it
 // Two panels clicked: each row against the other panel's (textures/compare_<how>.png, on the right
 // of the row), worded by the row's more / less, or these
@@ -333,6 +334,7 @@ export function setupSearch({
   const goBtn = form.querySelector(".point-go");
   const resultEl = $("searchResult");
   const areasEl = $("searchAreas");
+  const gridEl = $("areasGrid");
   dateIn.value = new Date().toISOString().slice(0, 10);
 
   let active = false;
@@ -351,11 +353,12 @@ export function setupSearch({
     const across = 2 * PANEL_W + PANEL_GAP;
     const zoom = phone.matches
       ? Math.min(1, (innerWidth - 20) / across)
-      : Math.min((innerHeight - 32) / (2 * PANEL_H + PANEL_GAP), (innerWidth - LEFT_COLUMN - 32) / across,
+      : Math.min((innerHeight - 32) / (AREAS_HEAD + 2 * PANEL_H + PANEL_GAP), (innerWidth - LEFT_COLUMN - 32) / across,
         (innerWidth / 2 - 16 - 14 - innerHeight / 4) / across);
-    areasEl.style.zoom = zoom;
-    // zoom scales the 16 px margins too: undo that, so they line up with Custom Point's panel
-    areasEl.style.top = areasEl.style.right = phone.matches ? "" : `${16 / zoom}px`;
+    if (phone.matches) areasEl.style.zoom = zoom;
+    // On a computer windows.js places them, at this size times the user's
+    areasEl.dataset.fit = zoom;
+    areasEl.dispatchEvent(new Event("fit"));
   };
   addEventListener("resize", fitPanels);
   phone.addEventListener("change", fitPanels);
@@ -425,7 +428,7 @@ export function setupSearch({
     areasEl.hidden = !areas;
     panels = [];
     comparing = [];
-    if (!areas) return areasEl.replaceChildren();
+    if (!areas) return gridEl.replaceChildren();
     const token = {};
     showAreas.token = token;
     panels = areas.map((a, i) => {
@@ -484,7 +487,7 @@ export function setupSearch({
       });
       return panel;
     });
-    areasEl.replaceChildren(...panels.map((p) => p.node));
+    gridEl.replaceChildren(...panels.map((p) => p.node));
     // The first row shows the Sun and the temperature, or the longest night when that is a
     // criterion; its ▲▼ follow the temperature when that is the only one of its criteria. The
     // second row shows the Earth link, or its longest gap when that is a criterion.

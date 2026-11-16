@@ -17,6 +17,7 @@ import { markerCanvas, ringCanvas, crosshairCanvas, letterCanvas } from "./marke
 import { setupRoutes } from "./routes.js";
 import { createSky } from "./stars.js";
 import { setupModes } from "./modes.js";
+import { setupWindows } from "./windows.js";
 import { setupCustomPoint } from "./customPoint.js";
 import { searchShader, setupSearch, AREA_COLOURS } from "./search.js";
 import { slopeShader, setSlopeVisible, loadSlope, slopeAt, SLOPE_COLOURS, SLOPE_MAX } from "./slope.js";
@@ -66,7 +67,6 @@ let currentExaggeration = Number(exagInput.value);
 const bottomPanel = $("panel");
 new ResizeObserver(() => {
   document.documentElement.style.setProperty("--panel-h", `${bottomPanel.offsetHeight}px`);
-  document.documentElement.style.setProperty("--panel-w", `${bottomPanel.offsetWidth}px`); // the Help button sits right of it
 }).observe(bottomPanel);
 
 // --- Renderer, scene, camera ------------------------------------------------
@@ -664,29 +664,50 @@ canvas.addEventListener("pointerup", (e) => {
 
 // --- Modes (buttons at the top left) ----------------------------------------------
 let mode = "visualisation";
-// While their panels show on the right, the Moon slides to the middle of the space between the
-// search card and the panels, and the camera backs away if needed so that it fits there; both come
-// back when the panels go (the distance only if the view was not zoomed since).
+// While the best areas show, the Moon slides to the middle of the space between the search card and
+// them; while a panel is at the bottom (windows.js), to the middle of the space above it. The camera
+// backs away if needed so that it fits there; both come back when the panels go (the distance only
+// if the view was not zoomed since).
 const SHIFT_TIME = 0.15;  // s: the slide eases with this time constant, whatever the frame rate
 const MOON_EDGE = 1.02;  // the Moon's radius with the relief exaggerated (1 = the Moon's radius)
 const AREAS_MARGIN = 14; // px between the Moon's edge and the cards
 let areasFit = null;     // { distance, before } while backed away for the panels
 let viewShift = 0;       // px the picture is moved left (camera view offset), eased towards viewShiftGoal
 let viewShiftGoal = 0;
+let viewLift = 0;        // px the picture is moved up, eased towards viewLiftGoal
+let viewLiftGoal = 0;
 let lastShiftStep = 0;
 
-// { shift, distance } for the Moon between the search card and the panels, or null
+// { shift, lift, distance } for the Moon in the free space, or null.
+// The search card and the best areas count where they are on a side (windows.js); any panel at the bottom counts.
 function areasLayout() {
+  if (!document.body.classList.contains("windows")) return null; // phone: the panels are below the Moon
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  let left = 0, right = W, bottom = H, used = false;
   const panels = $("searchAreas");
-  if (mode !== "search" || panels.hidden || getComputedStyle(panels).position !== "fixed") return null; // phone: below the Moon
-  const card = $("searchForm").getBoundingClientRect();
-  const left = card.width ? card.right : 0, right = panels.getBoundingClientRect().left;
-  const halfH = canvas.clientHeight / 2;
-  const room = Math.min((right - left) / 2 - AREAS_MARGIN, halfH - AREAS_MARGIN); // the Moon's radius on screen
+  if (mode === "search" && !panels.hidden) {
+    const sides = [$("searchForm"), panels]
+      .filter((n) => n.dataset.dock !== "bottom")
+      .map((n) => n.getBoundingClientRect())
+      .filter((r) => r.width);
+    if (sides.length) {
+      used = true;
+      left = Math.max(0, ...sides.filter((r) => r.left + r.width / 2 < W / 2).map((r) => r.right));
+      right = Math.min(W, ...sides.filter((r) => r.left + r.width / 2 >= W / 2).map((r) => r.left));
+    }
+  }
+  const low = [...document.querySelectorAll('.win[data-dock="bottom"]')]
+    .map((n) => n.getBoundingClientRect())
+    .filter((r) => r.width && r.height);
+  if (low.length) { used = true; bottom = Math.min(...low.map((r) => r.top)); }
+  if (!used) return null;
+  const halfH = H / 2;
+  const room = Math.min((right - left) / 2, bottom / 2) - AREAS_MARGIN; // the Moon's radius on screen
   if (room < 60) return null;
   const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   return {
-    shift: canvas.clientWidth / 2 - (left + right) / 2,
+    shift: W / 2 - (left + right) / 2,
+    lift: halfH - bottom / 2,
     distance: MOON_EDGE / Math.sin(Math.atan((room / halfH) * tanHalfFov)),
   };
 }
@@ -695,15 +716,18 @@ const areasFitDistance = () => areasLayout()?.distance ?? null;
 // The picture moved sideways without turning the camera, so the Moon stays a round disc
 function applyViewShift() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (Math.abs(viewShift) < 0.5) camera.clearViewOffset();
-  else camera.setViewOffset(w, h, viewShift, 0, w, h);
+  if (Math.abs(viewShift) < 0.5 && Math.abs(viewLift) < 0.5) camera.clearViewOffset();
+  else camera.setViewOffset(w, h, viewShift, viewLift, w, h);
 }
 
 function stepViewShift(now) {
   const dt = lastShiftStep ? Math.min(0.1, (now - lastShiftStep) / 1000) : 0.016; // the first step: one frame
   lastShiftStep = now;
-  viewShift += (viewShiftGoal - viewShift) * (1 - Math.exp(-dt / SHIFT_TIME));
+  const k = 1 - Math.exp(-dt / SHIFT_TIME);
+  viewShift += (viewShiftGoal - viewShift) * k;
+  viewLift += (viewLiftGoal - viewLift) * k;
   if (Math.abs(viewShiftGoal - viewShift) < 0.5) viewShift = viewShiftGoal;
+  if (Math.abs(viewLiftGoal - viewLift) < 0.5) viewLift = viewLiftGoal;
   applyViewShift();
   wake();
 }
@@ -721,6 +745,7 @@ function fitMoonToAreas() {
   const need = layout?.distance ?? null;
   const now = flight ? flight.endDist : camera.position.length(); // where the camera is going
   viewShiftGoal = layout?.shift ?? 0;
+  viewLiftGoal = layout?.lift ?? 0;
   if (need) {
     if (need > now + 0.005) {
       areasFit = { distance: need, before: areasFit?.before ?? now };
@@ -796,6 +821,8 @@ const modes = setupModes((name) => {
   fitMoonToAreas();
 });
 addEventListener("resize", fitMoonToAreas); // after search.js has resized the panels
+// The mode panels as windows: resized, moved and minimised by the user
+setupWindows({ onChange: fitMoonToAreas });
 
 // --- Direction arrows (Sun, Earth, poles), at Custom Point's date and time -----------------
 const arrows = createArrows();
@@ -1175,7 +1202,7 @@ renderer.setAnimationLoop((now) => {
     placeOverlays();
     pendingExaggeration = null;
   }
-  if (viewShift !== viewShiftGoal) stepViewShift(now);
+  if (viewShift !== viewShiftGoal || viewLift !== viewLiftGoal) stepViewShift(now);
   else lastShiftStep = 0;
   if (flight) updateFlight();
   // Rotate and zoom more gently when close to the surface

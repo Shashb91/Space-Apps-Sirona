@@ -277,11 +277,12 @@ export function setupCustomPoint({ ready, elevationKm, geologyAt, onPick, onFly,
       const cut = (v) => `${Math.max(0, Math.round(v))}px`;
       floatsEl.style.clipPath =
         `inset(${cut(view.top)} ${cut(window.innerWidth - view.right)} ${cut(window.innerHeight - view.bottom)} ${cut(view.left)})`;
-      // Free space between the left card and the right panel (both float over the Moon on a computer)
-      let lo = 8, hi = window.innerWidth - 8;
-      const leftCard = $("layers"), rightPanel = $("monthPanel");
-      if (getComputedStyle(leftCard).position === "fixed") lo = leftCard.getBoundingClientRect().right + 8;
-      if (!rightPanel.hidden && getComputedStyle(rightPanel).position === "fixed") hi = rightPanel.getBoundingClientRect().left - 8;
+      // The panels on screen (cards, month, bottom-left panel; wherever they are docked): a floating
+      // panel is kept clear of those beside it at its own height, never of the others
+      const blocks = [...document.querySelectorAll(".win, #panel")]
+        .filter((n) => getComputedStyle(n).position === "fixed")
+        .map((n) => n.getBoundingClientRect())
+        .filter((r) => r.width && r.height);
 
       const sizes = points.map((p) => [p.node.offsetWidth, p.node.offsetHeight]);
       points.forEach((p, i) => {
@@ -289,13 +290,20 @@ export function setupCustomPoint({ ready, elevationKm, geologyAt, onPick, onFly,
         p.node.style.visibility = a ? "" : "hidden";
         if (!a) return;
         const [w, h] = sizes[i];
+        const up = a.y - GAP - h >= Math.max(view.top, 0) + 8;
+        const top = up ? a.y - GAP - h : a.y + GAP;
+        let lo = 8, hi = window.innerWidth - 8;
+        for (const r of blocks) {
+          if (r.bottom <= top || r.top >= top + h) continue; // above or below it
+          if (r.left + r.width / 2 < a.x) lo = Math.max(lo, r.right + 8);
+          else hi = Math.min(hi, r.left - 8);
+        }
         const fitsRight = a.x + GAP + w <= hi;
         const fitsLeft = a.x - GAP - w >= lo;
         const right = fitsRight || (!fitsLeft && hi - a.x >= a.x - lo);
-        const up = a.y - GAP - h >= Math.max(view.top, 0) + 8;
         const ideal = right ? a.x + GAP : a.x - GAP - w;
         const x = Math.min(Math.max(ideal, lo), hi - w); // stays on screen
-        p.node.style.transform = `translate(${Math.round(x)}px, ${Math.round(up ? a.y - GAP - h : a.y + GAP)}px)`;
+        p.node.style.transform = `translate(${Math.round(x)}px, ${Math.round(top)}px)`;
         p.node.dataset.side = x === ideal ? `${up ? "up" : "down"}-${right ? "right" : "left"}` : ""; // no tail when pushed aside
       });
     },

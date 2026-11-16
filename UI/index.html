@@ -26,11 +26,15 @@
   <div id="status">Loading NASA Moon data…</div>
 
   <div id="layers" class="layers">
+    <div class="mode-row">
     <div class="modes" role="tablist" aria-label="Mode">
       <button type="button" class="mode" role="tab" data-mode="visualisation" aria-controls="mode-visualisation">Visualisation</button>
       <button type="button" class="mode" role="tab" data-mode="custom" aria-controls="mode-custom">Custom Point</button>
       <button type="button" class="mode" role="tab" data-mode="search" aria-controls="mode-search">Parametric Search</button>
       <button type="button" class="mode" role="tab" data-mode="maps" aria-controls="mode-maps">Sirona Maps</button>
+    </div>
+    <!-- Help (help.js): the help of the mode shown, from help/<mode>.md -->
+    <button id="helpButton" class="mode help-button" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="helpDialog">Help</button>
     </div>
 
     <!-- Layers can be ticked together; their panels then share the right side as tabs -->
@@ -259,8 +263,6 @@
     </div>
   </div>
 
-  <!-- Help (help.js): the help of the mode shown, from help/<mode>.md -->
-  <button id="helpButton" class="mode help-button" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="helpDialog">Help</button>
   <dialog id="helpDialog" class="category-dialog help-dialog" aria-labelledby="helpTitle">
     <div class="help-head">
       <h2 id="helpTitle" class="help-title">Help</h2>
@@ -313,7 +315,10 @@
   </aside>
 
   <!-- Parametric Search, "Any one is enough": the 4 best areas, 2 × 2 on the right (filled by search.js) -->
-  <div id="searchAreas" class="search-areas" aria-label="Best areas" hidden></div>
+  <div id="searchAreas" class="search-areas" aria-label="Best areas" hidden>
+    <h2 class="window-title areas-title">Best areas</h2>
+    <div id="areasGrid" class="areas-grid"></div>
+  </div>
 
   <div id="tooltip" class="window tooltip" hidden></div>
 

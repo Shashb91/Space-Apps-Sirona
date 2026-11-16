@@ -22,3 +22,8 @@ Over long periods, the values are taken every few hours instead of every hour.
 
 - Hills and crater walls can hide the Sun and the Earth: when the server has the relief map, it takes them into account.
 - The Sun and Earth values come from the team's Python server, from NASA/JPL ephemerides (SPICE). Without the server, the panel says so.
+
+## The panels
+
+- Drag a panel's title to move it to the left, the right or the bottom; a gold block shows where it will go (Escape cancels). At the bottom it becomes a wide strip, and the Moon steps back to fit above it.
+- Drag its free edges to resize it, and click **–** to shrink it to a small bar; **Reopen** brings it back.

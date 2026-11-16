@@ -36,3 +36,8 @@ Explore the Moon and what is known about its surface. Tick the layers on the lef
 - **High resolution**: a 4 times sharper colour map over the area you zoom into. Zoom in to see it.
 
 Some parts need the team's Python server (the arrows, Sunlight and Temperature). Without it, they say so.
+
+## The panels
+
+- Drag a panel's title to move it to the left, the right or the bottom; a gold block shows where it will go (Escape cancels). At the bottom it becomes a wide strip, and the Moon steps back to fit above it.
+- Drag its free edges to resize it, and click **–** to shrink it to a small bar; **Reopen** brings it back.

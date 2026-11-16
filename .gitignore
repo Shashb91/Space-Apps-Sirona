@@ -1,8 +1,16 @@
 # Made by launcher.py
 .venv/
 .launcher.lock
+map_quality.txt
 *.part
 __pycache__/
+
+# Only in this workspace, never on GitHub
+reset_beta.py
+build_zip.py
+README_HANDOFF.md
+category_test_files/
+.claude/
 
 # Too big for GitHub (over 25 MB): launcher.py downloads them from NASA, see README.md.
 # Python_backend/.gitignore keeps out ldem_64.tif, ldem_64_slope.tif and the SPICE kernels.
