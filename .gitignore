@@ -1,5 +1,6 @@
 # Made by launcher.py
 .venv/
+.vscode/
 .launcher.lock
 *.part
 __pycache__/
