@@ -19,10 +19,12 @@ import socket
 import ssl
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import traceback
 import urllib.error
+import urllib.parse
 import urllib.request
 import webbrowser
 import zipfile
@@ -48,6 +50,10 @@ MAPS = [
 ]
 SLOPE = BACKEND / "ldem_64_slope.tif"  # rover routes in Sirona Maps: made from ldem_64.tif
 MAKE_SLOPE = ROOT / "tools" / "make_slope_map.py"
+# High quality: ldem_64.tif (64 pixels per degree). Low: the 3D globe's ldem_16_uint.tif (16), in km for the server
+CHOICE = ROOT / "map_quality.txt"  # the answer to the map question: "high" or "low"
+LOW_DEM = BACKEND / "ldem_16.tif"
+LOW_SLOPE = BACKEND / "ldem_16_slope.tif"
 # The SPICE kernels (Python_backend/load_kernels.py), from NASA NAIF as in download_files.py
 NAIF = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/"
 KERNELS = {
@@ -119,6 +125,49 @@ def missing_maps():
     return [m for m in MAPS if not WANTED[m.name].exists()]
 
 
+def high_quality():
+    """True for the high quality relief map: there already, or the answer saved in map_quality.txt
+    (none: high, as when nobody can answer)."""
+    if WANTED["ldem_64.tif"].exists():
+        return True
+    try:
+        return CHOICE.read_text().strip() != "low"
+    except OSError:
+        return True
+
+
+def ask_quality():
+    """Asks once whether to download the high quality map, while it isn't there."""
+    if WANTED["ldem_64.tif"].exists() or CHOICE.exists():
+        return
+    print("\nThe high quality relief map (1.1 GB, 64 pixels per degree, about 470 m) makes the Sun, Earth")
+    print("and rover route results more precise. Without it, the app uses the standard one, already")
+    print("downloaded (16 pixels per degree, about 1.9 km).")
+    while True:
+        try:
+            answer = input("Download the high quality map? (y/n) ").strip().lower()
+        except EOFError:  # no keyboard: high, without saving it
+            return
+        if answer in ("y", "yes", "n", "no"):
+            break
+    CHOICE.write_text("high\n" if answer.startswith("y") else "low\n")
+    print(f"  Saved in {CHOICE.name}: delete it to be asked again.")
+
+
+def make_low_maps():
+    """The standard relief in km (as UI/main.js reads it) and its slope map, for the server."""
+    if not LOW_DEM.exists():
+        import numpy as np
+        import tifffile
+        raw = tifffile.imread(WANTED["ldem_16_uint.tif"])
+        part = LOW_DEM.with_name(LOW_DEM.name + ".part")
+        tifffile.imwrite(part, (raw * 0.0005 - 10).astype(np.float32), compression="zlib", predictor=True)
+        part.replace(LOW_DEM)
+    if not LOW_SLOPE.exists():
+        subprocess.call([sys.executable, str(MAKE_SLOPE), str(LOW_DEM), str(LOW_SLOPE)], stdout=subprocess.DEVNULL)
+    return LOW_SLOPE.exists()
+
+
 def remove(path):
     try:
         path.unlink()
@@ -179,7 +228,32 @@ def ssl_context():
     return context
 
 
-def download(url, dest, context, show):
+def add_issuer(context, url):
+    """A server can leave out the intermediate certificate (NASA SVS does): fetch it from the address in
+    the server's own certificate, as browsers do. The chain is still checked up to a trusted root."""
+    host = urllib.parse.urlsplit(url).hostname
+    pem = None
+    try:
+        with socket.create_connection((host, 443), timeout=30) as raw, \
+                ssl._create_unverified_context().wrap_socket(raw, server_hostname=host) as s:
+            leaf = s.getpeercert(binary_form=True)  # only read for the address below
+        with tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False) as f:
+            f.write(ssl.DER_cert_to_PEM_cert(leaf))
+            pem = f.name
+        for address in ssl._ssl._test_decode_cert(pem).get("caIssuers", ()):
+            if address.startswith("http"):
+                with urllib.request.urlopen(address, timeout=30) as r:
+                    context.load_verify_locations(cadata=r.read())  # DER
+                return True
+    except Exception:
+        pass
+    finally:
+        if pem:
+            remove(Path(pem))
+    return False
+
+
+def download(url, dest, context, show, retried=False):
     """url -> dest through a .part file: a later try goes on from where this one stopped.
     show(done, size) gets the progress (size 0: unknown)."""
     part = dest.with_name(dest.name + ".part")
@@ -191,6 +265,10 @@ def download(url, dest, context, show):
         if e.code == 416 and have:  # the .part doesn't fit the file: start again
             remove(part)
             return download(url, dest, context, show)
+        raise
+    except urllib.error.URLError as e:
+        if isinstance(e.reason, ssl.SSLCertVerificationError) and not retried and add_issuer(context, url):
+            return download(url, dest, context, show, retried=True)
         raise
     with r, open(part, "ab" if r.status == 206 else "wb") as out:
         done = have if r.status == 206 else 0
@@ -374,8 +452,17 @@ def serve(open_browser):
         print("\nThe Python server could not start: only the 3D Moon works "
               "(not Custom Point, the Sun and Earth criteria or Sirona Maps).")
         app, constants, problems = FastAPI(), None, True
-    later = [m for m in missing if not m.needed]
-    slope = not SLOPE.exists() and MAKE_SLOPE.exists()  # made once ldem_64.tif is there
+    high = high_quality()
+    later = [m for m in missing if not m.needed and high]
+    slope = high and not SLOPE.exists() and MAKE_SLOPE.exists()  # made once ldem_64.tif is there
+    if not high and constants:
+        print("\nUsing the standard relief map (16 pixels per degree). For the high quality one,")
+        print(f"delete {CHOICE.name} and start again.")
+        if make_low_maps():
+            constants.DEM_FILE, constants.DEM_PPD = str(LOW_DEM), 16
+            constants.SLOPE_FILE, constants.SLOPE_PPD = str(LOW_SLOPE), 16
+        else:
+            print(f"  Could not make {LOW_SLOPE.name}: the next start tries again.")
     if later:
         dem = getattr(constants, "DEM_FILE", None)
         if constants and not WANTED["ldem_64.tif"].exists():
@@ -445,6 +532,7 @@ def main():
         return 0
     print(f"{NAME}\n{'=' * len(NAME)}")
     place_files()
+    ask_quality()
     code = 1
     for attempt in range(2):
         if not ensure_packages(repair=attempt > 0):
