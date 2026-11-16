@@ -58,8 +58,8 @@ Set A, B and the steepest slope your rover can take. The app finds a route that 
 
 ## The team
 
-- [@maximechaudronperso-ui](https://github.com/maximechaudronperso-ui) drew the interface: the mode buttons, panel frames, tick boxes, knob, area markers and music button.
-- [@Shashb91](https://github.com/Shashb91) built the website: the 3D Moon in Three.js and the four modes.
+- [@maximechaudronperso-ui](https://github.com/maximechaudronperso-ui) drew the interface: the mode buttons, panel frames, tick boxes, knob, area markers and music button, but also worked on the datasets.
+- [@Shashb91](https://github.com/Shashb91) built the website: the 3D Moon in Three.js and the four modes, but also worked on the datasets.
 - [@OlivierAntonio](https://github.com/OlivierAntonio) and [@Thomas-Gaume](https://github.com/Thomas-Gaume) built the Python brain behind it: the Sun, the Earth and the temperatures from NASA's SPICE data, the A\* route finder for Sirona Maps, and the search for Parametric Search.
 
 ## Under the hood
